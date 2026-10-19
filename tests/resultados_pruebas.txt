@@ -1,0 +1,36 @@
+PNK Security - Resultados de pruebas de seguridad
+Fecha (UTC): 2026-10-19 14:19:36
+PHP: 8.3.6
+Ambiente: local aislado (php -S 127.0.0.1 + SQLite sintética)
+Nota: el servidor embebido no aplica .htaccess; esos controles se verifican en Apache (ver docs).
+
+ID   Hallazgo ASVS v5.0.0   Resultado Descripción
+T01  PNK-01   1.2.4         PASA      Login con inyección SQL (' OR '1'='1) no autentica
+T02  PNK-08   7.2.4         PASA      Login válido autentica y regenera el ID de sesión
+T03  PNK-08   3.3.2/3.3.4   PASA      Cookie de sesión con HttpOnly y SameSite
+T04  PNK-07   3.5.1         PASA      Login sin token CSRF es rechazado (403)
+T05  PNK-07   3.5.3/7.4.1   PASA      Logout exige POST+CSRF e invalida la sesión
+T06  PNK-10   7.4.2         PASA      Usuario con estado inactivo no puede autenticarse
+T07  PNK-09   6.3.1         PASA      Bloqueo tras 5 intentos fallidos (incluso con la clave correcta)
+T08  PNK-09   6.3.8         PASA      Mensaje de error de login genérico (sin enumeración)
+T09  PNK-02   1.2.4/2.2.1   PASA      index.php?id con inyección SQL devuelve 404
+T10  PNK-02   8.2.2         PASA      Restaurante eliminado lógicamente no es accesible
+T11  PNK-12   1.2.1         PASA      XSS reflejado en id/keyid no se refleja
+T12  PNK-06   8.2.1         PASA      Comentar sin autenticación es rechazado (403)
+T13  PNK-05   1.2.1/3.2.2   PASA      Comentario con <script> se almacena y se muestra escapado
+T14  PNK-06   8.2.3         PASA      El autor del comentario proviene de la sesión (no del formulario)
+T15  PNK-06   8.2.2         PASA      Un usuario no puede eliminar el comentario de otro (IDOR)
+T16  PNK-06   8.2.2         PASA      El titular sí puede eliminar su propio comentario (supresión)
+T17  PNK-07   3.5.1/3.5.3   PASA      Carrito: GET=405 y POST sin CSRF=403
+T18  PNK-02   1.2.4/2.2.1   PASA      Carrito: iditems con SQLi=400, item oculto=404, item válido=200
+T19  PNK-11   2.3.1         PASA      Vaciar carrito no cierra la sesión del usuario
+T20  PNK-05   1.2.1         PASA      Datos de BD con HTML (nombre de item) se escapan
+T21  PNK-14   3.4.3-3.4.6   PASA      Cabeceras de seguridad presentes
+T22  PNK-15   16.3.1/16.2.5 PASA      Log registra eventos de autenticación sin contraseña ni correo en claro
+T23  PNK-16   16.5.1        PASA      Errores internos devuelven mensaje genérico (sin traza ni SQL)
+T24  PNK-04   13.3.1/13.2.3 PASA      conectar() rechaza root / contraseña vacía en MySQL
+T25  PNK-18   6.3.3         PASA      MFA: con contraseña correcta pero sin código, no autentica
+T26  PNK-18   6.3.3         PASA      MFA: código TOTP incorrecto es rechazado
+T27  PNK-18   6.3.3         PASA      MFA: contraseña + código TOTP válido autentica
+
+Total: 27/27 pruebas pasan.

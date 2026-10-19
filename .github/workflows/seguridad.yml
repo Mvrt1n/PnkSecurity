@@ -1,0 +1,54 @@
+# Pipeline de seguridad — PNK Security (resuelve ACC-05)
+# Ejecuta en cada push y pull request: lint de PHP, SAST por patrones,
+# escaneo de secretos y la batería de pruebas de seguridad (24 + MFA).
+name: seguridad
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  appsec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, mbstring, curl
+          coverage: none
+
+      - name: Lint de todos los PHP
+        run: find pnkSecurity herramientas config tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: SAST por patrones (falla si aparecen patrones inseguros nuevos)
+        run: |
+          php tests/sast_basico.php pnkSecurity | tee sast.txt
+          # 1 coincidencia conocida y justificada: session_destroy() en el logout.
+          N=$(grep -oE 'Total coincidencias: [0-9]+' sast.txt | grep -oE '[0-9]+')
+          echo "Coincidencias SAST: $N"
+          if [ "$N" -gt 1 ]; then echo "::error::Nuevos patrones inseguros detectados"; exit 1; fi
+
+      - name: Escaneo de secretos (sin credenciales en el código)
+        run: |
+          if grep -rnE '(mysqli_connect|new\s+PDO)\([^)]*["'"'"']root["'"'"']' pnkSecurity; then
+            echo "::error::Credencial embebida detectada"; exit 1; fi
+          echo "Sin secretos embebidos."
+
+      - name: Pruebas de seguridad (24 controles + MFA)
+        run: php tests/pruebas_seguridad.php
+
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-seguridad
+          path: |
+            tests/resultados_pruebas.txt
+            sast.txt

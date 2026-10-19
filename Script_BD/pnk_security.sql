@@ -1,8 +1,11 @@
-﻿# Host: localhost  (Version 8.0.17)
+# Host: localhost  (Version 8.0.17)
 # Date: 2020-11-05 00:16:07
 # Generator: MySQL-Front 6.0  (Build 2.20)
 
-CREATE DATABASE `pnk_security` DEFAULT CHARACTER SET latin1 COLLATE latin1_spanish_ci;
+-- v2 (SSDLC): charset utf8mb4, usuarios sin contraseñas en claro, tabla de intentos de login,
+-- comentarios con autor (usuario_id). Ver docs/ y Script_BD/02_usuario_app.sql
+CREATE DATABASE IF NOT EXISTS `pnk_security` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_spanish_ci;
+USE `pnk_security`;
 
 #
 # Structure for table "cartas"
@@ -59,11 +62,15 @@ INSERT INTO `categorias` VALUES (1,'Blancos',b'1','',1,'2020-09-22 23:28:29',NUL
 DROP TABLE IF EXISTS `comentarios`;
 CREATE TABLE `comentarios` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `usuario` varchar(255) COLLATE utf8_spanish_ci DEFAULT NULL,
-  `comentario` text COLLATE utf8_spanish_ci,
+  `usuario` varchar(255) COLLATE utf8_spanish_ci DEFAULT NULL COMMENT 'nombre visible del autor (copiado desde la sesion)',
+  `usuario_id` int(11) DEFAULT NULL COMMENT 'autor autenticado; permite al titular eliminar su comentario',
+  `comentario` varchar(1000) COLLATE utf8_spanish_ci DEFAULT NULL,
   `id_restaurante` int(11) DEFAULT NULL,
-  PRIMARY KEY (`Id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+  `creado` datetime DEFAULT NULL COMMENT 'UTC',
+  PRIMARY KEY (`Id`),
+  KEY `idx_com_resto` (`id_restaurante`),
+  KEY `idx_com_usuario` (`usuario_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
 
 #
 # Data for table "comentarios"
@@ -157,14 +164,32 @@ DROP TABLE IF EXISTS `usuarios`;
 CREATE TABLE `usuarios` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(255) COLLATE utf8_spanish_ci DEFAULT NULL,
-  `email` varchar(255) COLLATE utf8_spanish_ci DEFAULT NULL,
-  `password` varchar(255) COLLATE utf8_spanish_ci DEFAULT NULL,
-  `estado` varchar(255) COLLATE utf8_spanish_ci DEFAULT NULL,
-  PRIMARY KEY (`Id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
+  `email` varchar(255) COLLATE utf8_spanish_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8_spanish_ci NOT NULL COMMENT 'hash bcrypt (password_hash); nunca texto plano',
+  `estado` varchar(255) COLLATE utf8_spanish_ci DEFAULT '1' COMMENT '1 = activo; otro valor = bloqueado',
+  `totp_secret` varchar(64) COLLATE utf8_spanish_ci DEFAULT NULL COMMENT 'secreto base32 para MFA/TOTP; NULL = sin segundo factor',
+  PRIMARY KEY (`Id`),
+  UNIQUE KEY `uq_usuarios_email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_spanish_ci;
 
 #
 # Data for table "usuarios"
 #
+# Sin cuentas por defecto (ASVS v5.0.0-6.3.2). Crear usuarios con:
+#   php herramientas/crear_usuario.php "Nombre" correo@ejemplo.cl
+#
 
-INSERT INTO `usuarios` VALUES (1,'Administrador','admin@gmail.com','admin01','1'),(2,'Alondra','alondra@gmail.com','alondra01','1');
+#
+# Structure for table "login_intentos" (anti fuerza bruta, ASVS v5.0.0-6.3.1)
+#
+
+DROP TABLE IF EXISTS `login_intentos`;
+CREATE TABLE `login_intentos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `email_hash` char(16) NOT NULL COMMENT 'HMAC seudonimizado del correo, no el correo',
+  `ip` varchar(45) NOT NULL,
+  `fecha` datetime NOT NULL COMMENT 'UTC',
+  PRIMARY KEY (`id`),
+  KEY `idx_li_email_fecha` (`email_hash`,`fecha`),
+  KEY `idx_li_ip_fecha` (`ip`,`fecha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

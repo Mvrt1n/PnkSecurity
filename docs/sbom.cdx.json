@@ -1,0 +1,113 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:5e07c131-ae13-4704-a0b4-ec2c9375772a",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-19T04:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "pnk-security",
+      "version": "2.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "jquery",
+      "version": "3.7.1",
+      "purl": "pkg:npm/jquery@3.7.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a"
+        }
+      ],
+      "properties": [
+        {
+          "name": "ruta",
+          "value": "vendors/jquery/jquery-3.7.1.min.js"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "bootstrap",
+      "version": "4.6.2",
+      "purl": "pkg:npm/bootstrap@4.6.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "19126b874a32753d42c12dfa6c17892bfd93820a5a5100ba1b34da4d07599b49"
+        }
+      ],
+      "properties": [
+        {
+          "name": "ruta",
+          "value": "vendors/bootstrap/bootstrap.bundle.min.js"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "owl.carousel",
+      "version": "2.3.4",
+      "purl": "pkg:npm/owl.carousel@2.3.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a53c43f834b32309b084ea9314df8307e9c78cee2202c6e07f216ae4ae5b704d"
+        }
+      ],
+      "properties": [
+        {
+          "name": "ruta",
+          "value": "vendors/owl-carousel/owl.carousel.min.js"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "themify-icons",
+      "version": "2014-05-23",
+      "purl": "pkg:generic/themify-icons@2014-05-23",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e8a90594cc8c2796c488059c7ee25ce6cc9de27c7ac359ee680b50a2bf438da6"
+        }
+      ],
+      "properties": [
+        {
+          "name": "ruta",
+          "value": "vendors/themify-icons/themify-icons.css"
+        },
+        {
+          "name": "nota",
+          "value": "Versión inferida del archivo 'Themify IconFonts 5-23-2014.json'; licencia a validar"
+        }
+      ]
+    }
+  ]
+}
