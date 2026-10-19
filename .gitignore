@@ -1,4 +1,6 @@
-logs/*.log
 config/config.local.php
+logs/*
+!logs/.htaccess
+*.log
+.env
 .DS_Store
-*.tmp

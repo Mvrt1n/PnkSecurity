@@ -1,0 +1,53 @@
+DEPRECATED     index.php:107  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:113  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:178  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:179  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:180  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:233  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:235  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:24  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:266  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:295  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:298  utf8_encode obsoleto en PHP 8.2+
+DEPRECATED     index.php:299  utf8_encode obsoleto en PHP 8.2+
+MYSQLI-QUERY   carrito.php:20  mysqli_query sin preparar
+MYSQLI-QUERY   grcomentarios.php:7  mysqli_query sin preparar
+MYSQLI-QUERY   index.php:12  mysqli_query sin preparar
+MYSQLI-QUERY   index.php:149  mysqli_query sin preparar
+MYSQLI-QUERY   index.php:229  mysqli_query sin preparar
+MYSQLI-QUERY   index.php:249  mysqli_query sin preparar
+MYSQLI-QUERY   index.php:272  mysqli_query sin preparar
+MYSQLI-QUERY   index.php:408  mysqli_query sin preparar
+MYSQLI-QUERY   mostrar_carrito.php:9  mysqli_query sin preparar
+MYSQLI-QUERY   setup/procesalogin.php:6  mysqli_query sin preparar
+SECRET-DBROOT  setup/setup.php:5  Credencial root embebida
+SESS-DESTROY   carrito.php:35  session_destroy (revisar contexto)
+SESS-DESTROY   setup/cerrar_sesion.php:4  session_destroy (revisar contexto)
+SQLI-CONCAT    carrito.php:19  SQL construido por concatenación
+SQLI-CONCAT    grcomentarios.php:6  SQL construido por concatenación
+SQLI-CONCAT    index.php:228  SQL construido por concatenación
+SQLI-CONCAT    index.php:248  SQL construido por concatenación
+SQLI-CONCAT    index.php:271  SQL construido por concatenación
+SQLI-CONCAT    index.php:407  SQL construido por concatenación
+SQLI-CONCAT    setup/procesalogin.php:5  SQL construido por concatenación
+SQLI-SUPERGL   carrito.php:19  Superglobal dentro de SQL
+SQLI-SUPERGL   grcomentarios.php:6  Superglobal dentro de SQL
+SQLI-SUPERGL   setup/procesalogin.php:5  Superglobal dentro de SQL
+XSS-ECHO-IN    index.php:89  Salida directa de entrada del usuario
+XSS-ECHO-IN    mostrar_carrito.php:61  Salida directa de entrada del usuario
+XSS-ECHO-RAW   index.php:126  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:135  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:169  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:208  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:289  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:323  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:414  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:416  echo de dato sin escapar
+XSS-ECHO-RAW   index.php:75  echo de dato sin escapar
+XSS-ECHO-RAW   mostrar_carrito.php:101  echo de dato sin escapar
+XSS-ECHO-RAW   mostrar_carrito.php:102  echo de dato sin escapar
+XSS-ECHO-RAW   mostrar_carrito.php:105  echo de dato sin escapar
+XSS-ECHO-RAW   mostrar_carrito.php:19  echo de dato sin escapar
+XSS-ECHO-RAW   mostrar_carrito.php:47  echo de dato sin escapar
+
+Total coincidencias: 51

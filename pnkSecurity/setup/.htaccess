@@ -1,0 +1,4 @@
+# Sólo los endpoints de autenticación son accesibles directamente; setup.php es una librería.
+<Files "setup.php">
+    Require all denied
+</Files>

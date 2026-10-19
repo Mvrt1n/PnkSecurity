@@ -1,0 +1,3 @@
+SESS-DESTROY   setup/setup.php:253  session_destroy (revisar contexto)
+
+Total coincidencias: 1
