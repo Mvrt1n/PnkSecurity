@@ -1,0 +1,18 @@
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: cambia_esta_clave
+      MYSQL_DATABASE: pnk_security
+    volumes:
+      - ./Script_BD/pnk_security.sql:/docker-entrypoint-initdb.d/01.sql:ro
+  web:
+    build: .
+    ports: ["8080:80"]
+    depends_on: [db]
+    environment:
+      APP_ENV: prod
+      DB_DSN: "mysql:host=db;dbname=pnk_security;charset=utf8mb4"
+      DB_USER: root
+      DB_PASS: cambia_esta_clave
+      LOG_PEPPER: cambia_este_valor
