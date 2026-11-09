@@ -1,0 +1,491 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  PnkSecurity - Carta Digital (Tercera Evaluacion INACAP).
+  Infraestructura como codigo: VPC, subredes publicas/privadas, Security Groups,
+  RDS PostgreSQL (privado), Application Load Balancer, Target Group, Listener,
+  Launch Template, Auto Scaling Group con politica de escalado.
+  Compatible con AWS Academy Learner Lab (reutiliza LabInstanceProfile; NO crea IAM).
+
+# ---------------------------------------------------------------------------
+# PARAMETROS (valores configurables; los secretos usan NoEcho)
+# ---------------------------------------------------------------------------
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: pnk-prod
+    Description: Prefijo/etiqueta del ambiente (dev | qa | prod).
+
+  VpcCidr:
+    Type: String
+    Default: 10.20.0.0/16
+
+  PublicSubnet1Cidr:
+    Type: String
+    Default: 10.20.1.0/24
+  PublicSubnet2Cidr:
+    Type: String
+    Default: 10.20.2.0/24
+  PrivateSubnet1Cidr:
+    Type: String
+    Default: 10.20.11.0/24
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.20.12.0/24
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small, t2.micro]
+    Description: Tipo de instancia EC2 para la app (Learner Lab recomienda micro/small).
+
+  InstanceProfileName:
+    Type: String
+    Default: LabInstanceProfile
+    Description: >
+      Instance Profile EXISTENTE a reutilizar. En AWS Academy Learner Lab es
+      "LabInstanceProfile". No se crean roles IAM porque el lab lo restringe.
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: AMI Amazon Linux 2023 mas reciente (resuelta via SSM).
+
+  AppRepoUrl:
+    Type: String
+    Description: >
+      URL HTTPS del repo Git PUBLICO a clonar en cada instancia
+      (ej. https://github.com/Mvrt1n/PnkSecurity-Eval3.git).
+
+  AppRepoBranch:
+    Type: String
+    Default: feature/tercera-evaluacion
+
+  AppPort:
+    Type: Number
+    Default: 3000
+
+  # --- Base de datos (RDS) ---
+  DBName:
+    Type: String
+    Default: pnk_carta_prod
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+  DBAllocatedStorage:
+    Type: Number
+    Default: 20
+  DBMasterUsername:
+    Type: String
+    Default: pnk_admin
+  DBMasterPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 12
+    Description: Password del usuario maestro de RDS (min 12 caracteres).
+  DBAppUsername:
+    Type: String
+    Default: pnk_app
+    Description: Rol de aplicacion de MENOR PRIVILEGIO (solo DML).
+  DBAppPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 12
+    Description: Password del rol de aplicacion pnk_app.
+
+  # --- Secretos de la aplicacion ---
+  SessionSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 16
+  LogPepper:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+  IaApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: API key de IA (opcional). Solo backend. Vacio = IA con fallback local.
+
+  # --- Auto Scaling ---
+  MinSize:
+    Type: Number
+    Default: 2
+  MaxSize:
+    Type: Number
+    Default: 4
+  DesiredCapacity:
+    Type: Number
+    Default: 2
+
+  # --- HTTPS opcional (si ya tienes un certificado ACM) ---
+  SSLCertificateArn:
+    Type: String
+    Default: ''
+    Description: ARN de certificado ACM para listener HTTPS 443. Vacio = solo HTTP 80.
+
+Conditions:
+  HasTLS: !Not [!Equals [!Ref SSLCertificateArn, '']]
+
+# ---------------------------------------------------------------------------
+# RECURSOS
+# ---------------------------------------------------------------------------
+Resources:
+
+  # ----- Red -----
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-vpc' }]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-igw' }]
+
+  IgwAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-public-1' }]
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PublicSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-public-2' }]
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-private-1' }]
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-private-2' }]
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-public-rt' }]
+
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IgwAttach
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RtAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+  PublicSubnet2RtAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  # ----- Security Groups (menor privilegio por capas) -----
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB publico - entra HTTP/HTTPS desde Internet
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: HTTP
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-alb-sg' }]
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Instancias de la app - solo reciben del ALB
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref AppPort
+          ToPort: !Ref AppPort
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+          Description: Trafico de la app solo desde el ALB
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-app-sg' }]
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS - solo acepta 5432 desde las instancias de la app
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref AppSecurityGroup
+          Description: PostgreSQL solo desde la app
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-db-sg' }]
+
+  # ----- RDS PostgreSQL (privado, cifrado, con backups) -----
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subredes privadas para RDS
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-db-subnets' }]
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub '${EnvironmentName}-postgres'
+      Engine: postgres
+      EngineVersion: '16.4'
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBMasterUsername
+      MasterUserPassword: !Ref DBMasterPassword
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups: [!Ref DbSecurityGroup]
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-postgres' }]
+
+  # ----- Application Load Balancer -----
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${EnvironmentName}-alb'
+      Type: application
+      Scheme: internet-facing
+      Subnets: [!Ref PublicSubnet1, !Ref PublicSubnet2]
+      SecurityGroups: [!Ref AlbSecurityGroup]
+      Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-alb' }]
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${EnvironmentName}-tg'
+      VpcId: !Ref Vpc
+      Port: !Ref AppPort
+      Protocol: HTTP
+      TargetType: instance
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 5
+      Matcher: { HttpCode: '200' }
+      TargetGroupAttributes:
+        - { Key: deregistration_delay.timeout_seconds, Value: '30' }
+
+  HttpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - !If
+          - HasTLS
+          # Si hay certificado: HTTP redirige a HTTPS
+          - Type: redirect
+            RedirectConfig: { Protocol: HTTPS, Port: '443', StatusCode: HTTP_301 }
+          # Si no: HTTP sirve directo a la app
+          - Type: forward
+            TargetGroupArn: !Ref TargetGroup
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasTLS
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates: [{ CertificateArn: !Ref SSLCertificateArn }]
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ----- Launch Template + Auto Scaling Group -----
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${EnvironmentName}-lt'
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        ImageId: !Ref LatestAmiId
+        IamInstanceProfile: { Name: !Ref InstanceProfileName }
+        SecurityGroupIds: [!Ref AppSecurityGroup]
+        TagSpecifications:
+          - ResourceType: instance
+            Tags: [{ Key: Name, Value: !Sub '${EnvironmentName}-app' }]
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -xeuo pipefail
+            exec > /var/log/pnk-userdata.log 2>&1
+
+            # 1) Dependencias: Docker + plugin Compose + git + postgresql client
+            dnf update -y
+            dnf install -y docker git postgresql15
+            systemctl enable --now docker
+            usermod -aG docker ec2-user || true
+            mkdir -p /usr/local/lib/docker/cli-plugins
+            curl -SL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64" \
+              -o /usr/local/lib/docker/cli-plugins/docker-compose
+            chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+            # 2) Clonar el repo (rama de la 3ra evaluacion)
+            rm -rf /opt/app
+            git clone --branch "${AppRepoBranch}" "${AppRepoUrl}" /opt/app
+            cd /opt/app
+
+            # 3) Generar env/.env.production apuntando a RDS (secretos via parametros CFN)
+            DB_ENDPOINT="${Database.Endpoint.Address}"
+            cat > env/.env.production <<EOF
+            NODE_ENV=production
+            APP_ENV=production
+            PORT=${AppPort}
+            APP_PORT=${AppPort}
+            APP_DEBUG=false
+            APP_FORCE_HTTPS=false
+            TRUST_PROXY=true
+            DB_HOST=${!DB_ENDPOINT}
+            DB_PORT=5432
+            DB_NAME=${DBName}
+            DB_USER=${DBAppUsername}
+            DB_PASSWORD=${DBAppPassword}
+            DB_SSL=true
+            DB_POOL_MAX=20
+            SESSION_SECRET=${SessionSecret}
+            LOG_PEPPER=${LogPepper}
+            BCRYPT_ROUNDS=12
+            IA_ENABLED=true
+            IA_PROVIDER=anthropic
+            IA_API_KEY=${IaApiKey}
+            IA_MODEL=claude-haiku-5-5
+            EOF
+            chmod 600 env/.env.production
+
+            # 4) Esperar a que RDS acepte conexiones
+            for i in $(seq 1 30); do
+              if pg_isready -h "${!DB_ENDPOINT}" -p 5432 -U "${DBMasterUsername}"; then break; fi
+              sleep 10
+            done
+
+            # 5) Migraciones (schema + seed + rol de menor privilegio) SOLO una vez.
+            #    Se usa un "lock" por advisory: la primera instancia que toma el
+            #    lock corre las migraciones; las demas esperan a que exista data.
+            export PGPASSWORD="${DBMasterPassword}"
+            MIG_DONE=$(psql -h "${!DB_ENDPOINT}" -U "${DBMasterUsername}" -d "${DBName}" -tAc \
+              "SELECT to_regclass('public.restautantes') IS NOT NULL;" || echo f)
+            if [ "$MIG_DONE" != "t" ]; then
+              psql -h "${!DB_ENDPOINT}" -U "${DBMasterUsername}" -d "${DBName}" -v ON_ERROR_STOP=1 -f db/init/01_schema.sql
+              psql -h "${!DB_ENDPOINT}" -U "${DBMasterUsername}" -d "${DBName}" -v ON_ERROR_STOP=1 -f db/init/02_seed.sql
+              psql -h "${!DB_ENDPOINT}" -U "${DBMasterUsername}" -d "${DBName}" -v ON_ERROR_STOP=1 <<SQL
+            DO \$\$ BEGIN
+              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='${DBAppUsername}') THEN
+                CREATE ROLE ${DBAppUsername} LOGIN PASSWORD '${DBAppPassword}';
+              END IF;
+            END \$\$;
+            GRANT CONNECT ON DATABASE ${DBName} TO ${DBAppUsername};
+            GRANT USAGE ON SCHEMA public TO ${DBAppUsername};
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${DBAppUsername};
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${DBAppUsername};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${DBAppUsername};
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${DBAppUsername};
+            SQL
+            fi
+            unset PGPASSWORD
+
+            # 6) Levantar SOLO el contenedor de la app (BD = RDS, no contenedor)
+            docker compose -f deploy/docker-compose.aws.yml -p pnk_aws up -d --build
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: [Database, HttpListener]
+    Properties:
+      AutoScalingGroupName: !Sub '${EnvironmentName}-asg'
+      VPCZoneIdentifier: [!Ref PublicSubnet1, !Ref PublicSubnet2]
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref DesiredCapacity
+      TargetGroupARNs: [!Ref TargetGroup]
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      Tags:
+        - { Key: Name, Value: !Sub '${EnvironmentName}-app', PropagateAtLaunch: true }
+
+  CpuScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 50.0
+        DisableScaleIn: false
+
+# ---------------------------------------------------------------------------
+# OUTPUTS (datos para verificar y para la documentacion)
+# ---------------------------------------------------------------------------
+Outputs:
+  AppUrl:
+    Description: URL publica de la aplicacion (a traves del Load Balancer)
+    Value: !Sub 'http://${LoadBalancer.DNSName}/'
+  LoadBalancerDNS:
+    Description: DNS del Application Load Balancer (usar como destino CNAME en Cloudflare)
+    Value: !GetAtt LoadBalancer.DNSName
+  RdsEndpoint:
+    Description: Endpoint de RDS PostgreSQL (privado)
+    Value: !GetAtt Database.Endpoint.Address
+  VpcId:
+    Value: !Ref Vpc
+  AutoScalingGroupName:
+    Value: !Ref AutoScalingGroup

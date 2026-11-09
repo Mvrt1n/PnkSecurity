@@ -1,0 +1,38 @@
+# =============================================================================
+# Compose para AWS (Auto Scaling + RDS).
+# A diferencia de los 3 ambientes locales, aqui NO hay contenedor de base de
+# datos: la BD es Amazon RDS PostgreSQL (gestionada, privada). Cada instancia
+# EC2 del Auto Scaling Group corre SOLO el contenedor de la app.
+#
+# Lo invoca el user-data del Launch Template (CloudFormation):
+#   docker compose -f deploy/docker-compose.aws.yml -p pnk_aws up -d --build
+#
+# Las rutas son relativas a este archivo (carpeta deploy/), por eso "..".
+# =============================================================================
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: pnk-carta:aws
+    restart: always
+    env_file:
+      - ../env/.env.production
+    ports:
+      - "3000:3000"            # el ALB (Target Group) apunta a este puerto
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M

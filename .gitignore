@@ -18,6 +18,9 @@ env/.env.local
 !env/.env.qa.example
 !env/.env.production.example
 
+# Despliegue AWS: secretos del stack (NUNCA versionar)
+deploy/deploy.env
+
 # Sistema / editor
 .DS_Store
 .vscode/
