@@ -1,0 +1,10 @@
+<%- include('partials/head', { titulo: typeof titulo !== 'undefined' ? titulo : 'Error' }) %>
+<%- include('partials/header') %>
+<main class="container">
+  <section class="resto-hero">
+    <h1><%= typeof codigo !== 'undefined' ? codigo : '' %> · <%= typeof titulo !== 'undefined' ? titulo : 'Error' %></h1>
+    <p class="muted"><%= mensaje %></p>
+    <p><a class="btn" href="/">← Volver al inicio</a></p>
+  </section>
+</main>
+<%- include('partials/footer') %>

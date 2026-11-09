@@ -1,0 +1,9 @@
+# Override de QA. Imagen construida (sin montar código), debug apagado.
+# Uso:
+#   APP_ENV=qa docker compose -p pnk_qa -f docker-compose.yml -f docker-compose.qa.yml up -d --build
+services:
+  app:
+    environment:
+      NODE_ENV: qa
+      APP_DEBUG: "false"
+    restart: unless-stopped

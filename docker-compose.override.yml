@@ -1,0 +1,17 @@
+# Override de DESARROLLO (se aplica automáticamente en `docker compose up`).
+# Monta el código para recarga en caliente y publica el puerto de PostgreSQL
+# para herramientas locales. NO usar en QA/producción.
+services:
+  app:
+    command: ["npm", "run", "dev"]        # node --watch
+    environment:
+      NODE_ENV: development
+      APP_DEBUG: "true"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./scripts:/app/scripts
+
+  db:
+    ports:
+      - "5432:5432"                        # solo en dev, para pgAdmin/psql local

@@ -1,0 +1,102 @@
+<%- include('partials/head', { titulo: restaurante.nombre }) %>
+<%- include('partials/header') %>
+
+<main class="container" data-restaurante="<%= restaurante.id %>" data-csrf="<%= csrfToken %>">
+
+  <section class="resto-hero">
+    <h1><%= restaurante.nombre %></h1>
+    <p class="resto-meta">
+      📍 <%= restaurante.calle %> <%= restaurante.numero %>, <%= restaurante.comuna %><% if (restaurante.region) { %>, <%= restaurante.region %><% } %>
+      &nbsp;·&nbsp; ☎️ <%= restaurante.fono %>
+    </p>
+  </section>
+
+  <!-- Asistente de IA de la carta -->
+  <section class="ia-box">
+    <h2>🤖 Asistente del menú</h2>
+    <p class="muted">Pídele una recomendación: “algo sin alcohol y barato”, “un plato de carne destacado”…</p>
+    <form id="ia-form" class="ia-form">
+      <input type="text" id="ia-pregunta" maxlength="300" placeholder="¿Qué se te antoja?" required>
+      <button type="submit" class="btn">Recomendar</button>
+    </form>
+    <div id="ia-respuesta" class="ia-respuesta" hidden></div>
+  </section>
+
+  <% if (destacados && destacados.length) { %>
+  <section>
+    <h2>⭐ Destacados</h2>
+    <div class="grid">
+      <% destacados.forEach(function(it){ %>
+        <article class="card">
+          <h3><%= it.nombre %></h3>
+          <p class="muted"><%= it.descripcion || '' %></p>
+          <p class="price">$<%= it.precio %></p>
+          <p class="stars">Puntuación: <%= it.puntuacion %>/5</p>
+          <button class="btn add-cart" data-item="<%= it.id %>">Agregar</button>
+        </article>
+      <% }); %>
+    </div>
+  </section>
+  <% } %>
+
+  <!-- Menú completo: cartas -> categorías -> ítems -->
+  <% menu.forEach(function(carta){ %>
+    <section class="carta">
+      <h2><%= carta.nombre %></h2>
+      <% carta.categorias.forEach(function(cat){ %>
+        <h3 class="cat"><%= cat.nombre %></h3>
+        <ul class="items">
+          <% cat.items.forEach(function(it){ %>
+            <li class="item">
+              <div>
+                <strong><%= it.nombre %></strong>
+                <% if (it.descripcion) { %><span class="muted"> — <%= it.descripcion %></span><% } %>
+              </div>
+              <div class="item-right">
+                <span class="price">$<%= it.precio %></span>
+                <button class="btn-sm add-cart" data-item="<%= it.id %>">+ Carrito</button>
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+      <% }); %>
+      <% if (!carta.categorias.length) { %><p class="muted">Sin categorías visibles.</p><% } %>
+    </section>
+  <% }); %>
+  <% if (!menu.length) { %><p class="muted">Este restaurante aún no tiene cartas publicadas.</p><% } %>
+
+  <!-- Comentarios -->
+  <section id="comentarios" class="comentarios">
+    <h2>💬 Comentarios</h2>
+
+    <% if (usuario) { %>
+      <form action="/comentarios" method="post" class="com-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="restauranteId" value="<%= restaurante.id %>">
+        <textarea name="comentario" maxlength="1000" required placeholder="Deja tu comentario"></textarea>
+        <button type="submit" class="btn">Publicar</button>
+      </form>
+    <% } else { %>
+      <p class="muted">Inicia sesión para comentar.</p>
+    <% } %>
+
+    <ul class="com-list">
+      <% comentarios.forEach(function(c){ %>
+        <li>
+          <strong><%= c.usuario %></strong>
+          <span class="muted"><%= c.creado ? new Date(c.creado).toLocaleString('es-CL') : '' %></span>
+          <p><%= c.comentario %></p>
+          <% if (usuario && usuario.id === c.usuario_id) { %>
+            <form action="/comentarios/<%= c.id %>/eliminar" method="post" class="inline">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="btn-ghost btn-sm">Eliminar</button>
+            </form>
+          <% } %>
+        </li>
+      <% }); %>
+      <% if (!comentarios.length) { %><li class="muted">Sé el primero en comentar.</li><% } %>
+    </ul>
+  </section>
+
+</main>
+<%- include('partials/footer') %>

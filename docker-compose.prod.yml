@@ -1,0 +1,30 @@
+# Override de PRODUCCIÓN. Endurecido: reinicio siempre, sin debug,
+# límites de recursos y sistema de archivos de solo lectura.
+# Uso:
+#   APP_ENV=production docker compose -p pnk_prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  app:
+    environment:
+      NODE_ENV: production
+      APP_DEBUG: "false"
+      APP_FORCE_HTTPS: "true"     # detrás de Cloudflare/ALB con TLS
+      TRUST_PROXY: "true"
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  db:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G

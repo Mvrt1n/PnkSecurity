@@ -1,0 +1,31 @@
+<%- include('partials/head', { titulo: 'Mi carrito' }) %>
+<%- include('partials/header') %>
+<main class="container" data-csrf="<%= csrfToken %>">
+  <h1>🛒 Mi carrito</h1>
+
+  <% if (carrito.items.length) { %>
+    <table class="cart">
+      <thead><tr><th>Plato</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr></thead>
+      <tbody>
+        <% carrito.items.forEach(function(i){ %>
+          <tr>
+            <td><%= i.nombre %></td>
+            <td>$<%= i.precio %></td>
+            <td><%= i.cantidad %></td>
+            <td>$<%= i.precio * i.cantidad %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+      <tfoot><tr><td colspan="3"><strong>Total</strong></td><td><strong>$<%= carrito.total %></strong></td></tr></tfoot>
+    </table>
+    <form action="/api/carrito/vaciar" method="post" id="vaciar-form" class="inline">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button type="submit" class="btn-ghost">Vaciar carrito</button>
+    </form>
+  <% } else { %>
+    <p class="muted">Tu carrito está vacío.</p>
+  <% } %>
+
+  <p><% if (restauranteId) { %><a class="btn" href="/carta/<%= restauranteId %>">← Volver a la carta</a><% } else { %><a class="btn" href="/">← Inicio</a><% } %></p>
+</main>
+<%- include('partials/footer') %>

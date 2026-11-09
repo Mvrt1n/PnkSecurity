@@ -1,0 +1,59 @@
+# ============================================================================
+# PNK Carta Digital — Compose base (backend Node + PostgreSQL)
+# El AMBIENTE se elige con la variable APP_ENV (development | qa | production)
+# y cada ambiente se ejecuta como un stack independiente con su project name:
+#
+#   DEV : docker compose -p pnk_dev up --build
+#   QA  : APP_ENV=qa  docker compose -p pnk_qa  -f docker-compose.yml -f docker-compose.qa.yml  up -d --build
+#   PROD: APP_ENV=production docker compose -p pnk_prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Usar -p garantiza redes, volúmenes y datos SEPARADOS por ambiente.
+# ============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ./env/.env.${APP_ENV:-development}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pnk_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en el env_file}
+      POSTGRES_DB: ${DB_NAME:-pnk_carta}
+      APP_DB_USER: ${DB_USER:-pnk_app}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en el env_file}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro   # schema + seed + rol app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pnk_admin} -d ${DB_NAME:-pnk_carta}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [pnknet]
+    # Puerto NO publicado al host por defecto (solo accesible en la red interna)
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./env/.env.${APP_ENV:-development}
+    environment:
+      NODE_ENV: ${APP_ENV:-development}
+      DB_HOST: db                 # nombre del servicio en la red interna
+      DB_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    networks: [pnknet]
+
+volumes:
+  pgdata:
+
+networks:
+  pnknet:
+    driver: bridge

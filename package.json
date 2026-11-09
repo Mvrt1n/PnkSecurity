@@ -1,0 +1,35 @@
+{
+  "name": "pnk-carta-digital",
+  "version": "3.0.0",
+  "description": "PNK Carta Digital — backend Node.js/Express + PostgreSQL con arquitectura MVC (Tercera evaluación). Puerto seguro del proyecto PHP original.",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "cross-env NODE_ENV=development node --watch src/server.js",
+    "start:qa": "cross-env NODE_ENV=qa node src/server.js",
+    "start:prod": "cross-env NODE_ENV=production node src/server.js",
+    "healthcheck": "node scripts/healthcheck.js",
+    "smoke": "node scripts/smoke_test.js",
+    "crear-usuario": "node scripts/crear_usuario.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.5",
+    "connect-pg-simple": "^10.0.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "express-session": "^1.18.1",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "pg": "^8.13.1"
+  },
+  "license": "MIT"
+}

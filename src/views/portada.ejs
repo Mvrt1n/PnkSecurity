@@ -1,0 +1,18 @@
+<%- include('partials/head', { titulo: 'PNK Carta Digital' }) %>
+<%- include('partials/header') %>
+<main class="container">
+  <section class="resto-hero">
+    <h1>Carta Digital</h1>
+    <p class="muted">Elige un restaurante para ver su menú.</p>
+  </section>
+  <div class="grid">
+    <% restaurantes.forEach(function(r){ %>
+      <a class="card link-card" href="/carta/<%= r.id %>">
+        <h3><%= r.nombre %></h3>
+        <span class="btn-sm">Ver carta →</span>
+      </a>
+    <% }); %>
+    <% if (!restaurantes.length) { %><p class="muted">No hay restaurantes cargados.</p><% } %>
+  </div>
+</main>
+<%- include('partials/footer') %>

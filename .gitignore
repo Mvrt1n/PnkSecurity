@@ -1,0 +1,24 @@
+# Dependencias y build
+node_modules/
+npm-debug.log*
+coverage/
+dist/
+
+# Logs
+*.log
+logs/
+
+# Variables de entorno y secretos (NUNCA versionar los reales)
+.env
+env/.env.qa
+env/.env.production
+env/.env.local
+# Se permiten las plantillas y el archivo de desarrollo (creds desechables)
+!env/.env.development
+!env/.env.qa.example
+!env/.env.production.example
+
+# Sistema / editor
+.DS_Store
+.vscode/
+.idea/
