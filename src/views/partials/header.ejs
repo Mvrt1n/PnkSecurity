@@ -2,10 +2,10 @@
     <a class="brand" href="/">🍽️ PNK <span>Carta Digital</span></a>
     <nav>
       <a href="/carrito" class="btn-link">🛒 Carrito</a>
-      <% if (usuario) { %>
-        <span class="user">👤 <%= usuario.nombre || usuario.email %></span>
+      <% if (locals.usuario) { %>
+        <span class="user">👤 <%= locals.usuario.nombre || locals.usuario.email %></span>
         <form action="/auth/logout" method="post" class="inline">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="_csrf" value="<%= locals.csrfToken || "" %>">
           <button type="submit" class="btn-link">Cerrar sesión</button>
         </form>
       <% } else { %>
@@ -14,11 +14,11 @@
     </nav>
   </header>
 
-  <% if (!usuario) { %>
+  <% if (!locals.usuario) { %>
   <dialog id="login" class="modal">
     <form action="/auth/login" method="post">
       <h3>Ingresar</h3>
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="_csrf" value="<%= locals.csrfToken || "" %>">
       <label>Correo <input type="email" name="email" required autocomplete="username"></label>
       <label>Contraseña <input type="password" name="password" required autocomplete="current-password"></label>
       <div class="modal-actions">

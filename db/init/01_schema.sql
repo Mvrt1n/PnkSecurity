@@ -144,4 +144,18 @@ CREATE TABLE IF NOT EXISTS login_intentos (
 CREATE INDEX IF NOT EXISTS idx_li_email_fecha ON login_intentos(email_hash, fecha);
 CREATE INDEX IF NOT EXISTS idx_li_ip_fecha    ON login_intentos(ip, fecha);
 
+-- ---------------------------------------------------------------------------
+-- session  (store de express-session / connect-pg-simple)
+-- Se crea aquí en el esquema para que la app NO la cree en caliente. Crearla
+-- desde dos instancias a la vez provoca una carrera (CREATE TABLE concurrente
+-- => "duplicate key ... pg_type_typname_nsp_index"). Preexistente = sin carrera.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS session (
+  sid    varchar      NOT NULL COLLATE "default",
+  sess   json         NOT NULL,
+  expire timestamp(6) NOT NULL,
+  CONSTRAINT session_pkey PRIMARY KEY (sid)
+);
+CREATE INDEX IF NOT EXISTS idx_session_expire ON session(expire);
+
 COMMIT;

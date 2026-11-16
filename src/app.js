@@ -39,10 +39,12 @@ app.use('/public', express.static(path.join(__dirname, '..', 'public'), {
   maxAge: config.isProd ? '7d' : 0,
 }));
 
-// Sesión persistida en PostgreSQL (misma BD, tabla "session" autocreada)
+// Sesión persistida en PostgreSQL (misma BD). La tabla "session" se crea en el
+// esquema (db/init/01_schema.sql), NO en caliente: createTableIfMissing:false
+// evita la carrera de creación concurrente entre varias instancias del ASG.
 const cookieSegura = config.app.forceHttps;
 app.use(session({
-  store: new PgSession({ pool, tableName: 'session', createTableIfMissing: true }),
+  store: new PgSession({ pool, tableName: 'session', createTableIfMissing: false }),
   name: cookieSegura ? '__Host-pnk.sid' : 'pnk.sid',
   secret: config.session.secret,
   resave: false,
